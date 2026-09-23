@@ -37,7 +37,7 @@ MODEL = os.getenv(
     os.getenv("BOURNOX_MODEL", "gpt-5.6-luna")
 )
 
-DB_FILE = "bournox.db"
+DB_FILE = os.getenv("XYRO_DB_FILE", "bournox.db")
 
 # =========================================================
 # FICHIERS JOINTS
@@ -123,13 +123,64 @@ au lieu d'inventer une réponse.
 # BASE DE DONNÉES
 # =========================================================
 
+class PostgresCompatConnection:
+    """Petit adaptateur pour garder le code SQLite existant compatible PostgreSQL.
+
+    Les requêtes du projet utilisent des placeholders '?' et conn.execute().
+    Cet adaptateur convertit automatiquement '?' en '%s' et ignore les PRAGMA
+    propres à SQLite. Ainsi, le même serveur peut tourner en local avec SQLite
+    et sur Render avec DATABASE_URL + PostgreSQL.
+    """
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, sql, params=()):
+        sql = sql.replace("?", "%s")
+        sql = re.sub(r"INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT", "BIGSERIAL PRIMARY KEY", sql, flags=re.I)
+        sql = re.sub(r"TEXT\s+DEFAULT\s+''", "TEXT DEFAULT ''", sql, flags=re.I)
+        if sql.lstrip().upper().startswith("PRAGMA"):
+            return _NoopCursor()
+        return self._conn.execute(sql, params or ())
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def close(self):
+        self._conn.close()
+
+
+class _NoopCursor:
+    def fetchone(self):
+        return None
+
+    def fetchall(self):
+        return []
+
+
 def get_db():
+    database_url = os.getenv("DATABASE_URL", "").strip()
+
+    if not database_url and os.getenv("RENDER", "").lower() == "true":
+        print("[XYRO] AVERTISSEMENT: DATABASE_URL est absent. SQLite local n'est pas persistant sur Render.")
+
+    if database_url:
+        try:
+            import psycopg
+            from psycopg.rows import dict_row
+            conn = psycopg.connect(database_url, row_factory=dict_row)
+            return PostgresCompatConnection(conn)
+        except Exception as exc:
+            raise RuntimeError(
+                "DATABASE_URL est défini mais PostgreSQL est inaccessible. "
+                "Vérifie DATABASE_URL et le package psycopg[binary]."
+            ) from exc
+
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
-
-    # Active les clés étrangères pour cette connexion.
     conn.execute("PRAGMA foreign_keys = ON")
-
     return conn
 
 
