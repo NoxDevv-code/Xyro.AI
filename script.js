@@ -2754,3 +2754,42 @@ if (
 } else {
     initialiserXyro();
 }
+
+
+// =========================================================
+// SIGNALEMENT DE COMPTE
+// =========================================================
+function ouvrirSignalement(){
+    const modal = document.getElementById('report-modal');
+    if(modal) modal.classList.add('open');
+}
+
+async function envoyerSignalement(){
+    const target = document.getElementById('report-target')?.value.trim();
+    const reason = document.getElementById('report-reason')?.value;
+    const details = document.getElementById('report-details')?.value.trim() || '';
+    if(!target){
+        afficherNotification('Indique le pseudo ou l’ID du compte.');
+        return;
+    }
+    try{
+        const r = await fetch('/api/reports', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            credentials:'same-origin',
+            body:JSON.stringify({reported_id:target, reason, details})
+        });
+        const data = await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(data.error || 'Impossible d’envoyer le signalement.');
+        fermerModal('report-modal');
+        const t=document.getElementById('report-target');
+        const d=document.getElementById('report-details');
+        if(t)t.value=''; if(d)d.value='';
+        afficherNotification('Signalement envoyé à l’administration.');
+    }catch(e){
+        afficherNotification('⚠️ '+e.message);
+    }
+}
+
+window.ouvrirSignalement = ouvrirSignalement;
+window.envoyerSignalement = envoyerSignalement;

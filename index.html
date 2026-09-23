@@ -1216,6 +1216,23 @@
                 <div class="settings-card">
 
                     <h3>
+                        🚨 Sécurité
+                    </h3>
+
+                    <p>
+                        Signale un compte qui ne respecte pas les règles.
+                    </p>
+
+                    <button class="setting-button report-launch" onclick="ouvrirSignalement()">
+                        🚨 Signaler un compte
+                    </button>
+
+                </div>
+
+
+                <div class="settings-card">
+
+                    <h3>
                         🎨 Apparence
                     </h3>
 
@@ -1555,6 +1572,28 @@
 
 </div>
 
+
+
+<!-- ================= MODALE SIGNALEMENT ================= -->
+<div class="modal-overlay" id="report-modal">
+    <div class="modal report-modal">
+        <button class="modal-close" onclick="fermerModal('report-modal')">×</button>
+        <div class="modal-icon">🚨</div>
+        <h2>Signaler un compte</h2>
+        <p>Ton signalement sera transmis à l'administration de Xyro.AI.</p>
+        <input id="report-target" placeholder="Pseudo ou ID Xyro" maxlength="80">
+        <select id="report-reason">
+            <option value="harcelement">Harcèlement</option>
+            <option value="spam">Spam</option>
+            <option value="arnaque">Arnaque</option>
+            <option value="dangereux">Contenu dangereux</option>
+            <option value="usurpation">Usurpation</option>
+            <option value="autre">Autre</option>
+        </select>
+        <textarea id="report-details" maxlength="1000" placeholder="Explique brièvement le problème (facultatif)"></textarea>
+        <button class="primary-btn full" onclick="envoyerSignalement()">Envoyer le signalement</button>
+    </div>
+</div>
 
 <!-- ================= NOTIFICATIONS ================= -->
 

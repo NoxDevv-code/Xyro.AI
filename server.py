@@ -283,6 +283,32 @@ def init_db():
     """)
 
     # -----------------------------------------------------
+    # SIGNALEMENTS DE COMPTES
+    # -----------------------------------------------------
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reporter_id TEXT NOT NULL,
+            reported_id TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            details TEXT DEFAULT '',
+            status TEXT DEFAULT 'pending',
+            created_at TEXT NOT NULL,
+            reviewed_at TEXT,
+            reviewed_by TEXT
+        )
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_reports_status_created
+        ON reports(status, id)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_reports_reported
+        ON reports(reported_id, id)
+    """)
+
+    # -----------------------------------------------------
     # INDEX
     # -----------------------------------------------------
 
@@ -1973,6 +1999,34 @@ def admin_authenticated():
     return False
 
 
+@app.route("/api/reports", methods=["POST"])
+def create_report():
+    user = current_user()
+    if not user:
+        return jsonify({"error": "Non connecté."}), 401
+    data = request.get_json() or {}
+    reported_id = str(data.get("reported_id", "")).strip()
+    reason = str(data.get("reason", "")).strip()
+    details = str(data.get("details", "")).strip()[:1000]
+    allowed = {"harcelement", "spam", "arnaque", "dangereux", "usurpation", "autre"}
+    if not reported_id or not reason:
+        return jsonify({"error": "Compte et motif obligatoires."}), 400
+    if reason not in allowed:
+        return jsonify({"error": "Motif de signalement invalide."}), 400
+    conn = get_db()
+    target = conn.execute("SELECT public_id, username FROM users WHERE public_id = ? OR lower(username) = lower(?)", (reported_id, reported_id)).fetchone()
+    if not target:
+        conn.close(); return jsonify({"error": "Compte introuvable."}), 404
+    if target["public_id"] == user["public_id"]:
+        conn.close(); return jsonify({"error": "Tu ne peux pas signaler ton propre compte."}), 400
+    duplicate = conn.execute("SELECT id FROM reports WHERE reporter_id = ? AND reported_id = ? AND status = 'pending' LIMIT 1", (user["public_id"], target["public_id"])).fetchone()
+    if duplicate:
+        conn.close(); return jsonify({"error": "Tu as déjà un signalement en attente pour ce compte."}), 409
+    conn.execute("INSERT INTO reports (reporter_id, reported_id, reason, details, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)", (user["public_id"], target["public_id"], reason, details, datetime.utcnow().isoformat()))
+    conn.commit(); conn.close()
+    return jsonify({"success": True})
+
+
 @app.route("/api/admin/me")
 def admin_me():
     if not admin_authenticated():
@@ -2104,6 +2158,10 @@ def admin_stats():
         "SELECT COUNT(*) AS n FROM alerts WHERE reviewed = 0"
     ).fetchone()["n"]
 
+    open_reports = conn.execute(
+        "SELECT COUNT(*) AS n FROM reports WHERE status = 'pending'"
+    ).fetchone()["n"]
+
     conn.close()
 
     return jsonify({
@@ -2113,6 +2171,7 @@ def admin_stats():
         "projects": projects,
         "alerts": alerts,
         "open_alerts": open_alerts,
+        "open_reports": open_reports,
         "status": "online",
         "model": MODEL
     })
@@ -2225,6 +2284,37 @@ def review_alert(alert_id):
     return jsonify({
         "success": True
     })
+
+
+@app.route("/api/admin/reports")
+def admin_reports():
+    if not admin_authenticated():
+        return jsonify({"error": "Accès refusé."}), 403
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT r.id, r.reporter_id, r.reported_id, r.reason, r.details, r.status, r.created_at, r.reviewed_at, r.reviewed_by,
+               reporter.username AS reporter_username, reported.username AS reported_username
+        FROM reports r
+        LEFT JOIN users reporter ON reporter.public_id = r.reporter_id
+        LEFT JOIN users reported ON reported.public_id = r.reported_id
+        ORDER BY r.id DESC LIMIT 100
+    """).fetchall()
+    conn.close()
+    return jsonify({"reports": [dict(row) for row in rows]})
+
+
+@app.route("/api/admin/reports/<int:report_id>/review", methods=["POST"])
+def review_report(report_id):
+    if not admin_authenticated():
+        return jsonify({"error": "Accès refusé."}), 403
+    data = request.get_json() or {}
+    status = str(data.get("status", "reviewed")).strip()
+    if status not in {"reviewed", "rejected"}:
+        return jsonify({"error": "Statut invalide."}), 400
+    conn = get_db()
+    conn.execute("UPDATE reports SET status = ?, reviewed_at = ?, reviewed_by = ? WHERE id = ?", (status, datetime.utcnow().isoformat(), session.get("admin_user_id"), report_id))
+    conn.commit(); conn.close()
+    return jsonify({"success": True})
 
 
 @app.route("/api/admin/users")
