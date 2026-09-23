@@ -3996,3 +3996,11 @@ input:focus, textarea:focus, select:focus { border-color:rgba(224,178,67,.48) !i
     .hero-actions { flex-direction: column; }
     .hero-actions > * { width: 100%; }
 }
+
+
+/* V3 NAVIGATION REPOSITIONED */
+.main-nav { display:flex; flex-direction:column; gap:8px; overflow-y:auto; padding-right:4px; }
+.nav-section-label { margin:12px 10px 2px; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; opacity:.48; }
+.nav-btn { order:initial; }
+.nav-report-btn { margin-top:4px; }
+@media (max-width: 800px) { .nav-section-label { display:none; } }

@@ -7,7 +7,7 @@
     <title>Xyro.AI V3</title>
     <meta name="description" content="Xyro.AI V3 — Ton IA. Ton univers.">
 
-    <link rel="stylesheet" href="style.css?v=xyro-v3-luxury">
+    <link rel="stylesheet" href="style.css?v=xyro-v3-layout-20260923">
 </head>
 
 <body>
@@ -34,54 +34,40 @@
 
         <nav class="main-nav">
 
-            <button class="nav-btn active"
-                    data-view="home"
-                    onclick="ouvrirVue('home')">
-                <span>⌂</span>
-                <span class="nav-label">Accueil</span>
+            <div class="nav-section-label">ESPACE</div>
+
+            <button class="nav-btn active" data-view="home" onclick="ouvrirVue('home')">
+                <span>⌂</span><span class="nav-label">Accueil</span>
             </button>
 
-            <button class="nav-btn"
-                    data-view="chat"
-                    onclick="ouvrirVue('chat')">
-                <span>💬</span>
-                <span class="nav-label">Chat</span>
-                <b>Nouveau</b>
+            <button class="nav-btn" data-view="chat" onclick="ouvrirVue('chat')">
+                <span>💬</span><span class="nav-label">Chat</span><b>Nouveau</b>
             </button>
 
-            <button class="nav-btn"
-                    data-view="projects"
-                    onclick="ouvrirVue('projects')">
-                <span>📁</span>
-                <span class="nav-label">Projets</span>
+            <button class="nav-btn" data-view="projects" onclick="ouvrirVue('projects')">
+                <span>📁</span><span class="nav-label">Projets</span>
             </button>
 
-            <button class="nav-btn"
-                    data-view="memory"
-                    onclick="ouvrirVue('memory')">
-                <span>🧠</span>
-                <span class="nav-label">Mémoire</span>
+            <button class="nav-btn" data-view="memory" onclick="ouvrirVue('memory')">
+                <span>🧠</span><span class="nav-label">Mémoire</span>
             </button>
 
-            <button class="nav-btn"
-                    data-view="tools"
-                    onclick="ouvrirVue('tools')">
-                <span>🔧</span>
-                <span class="nav-label">Outils</span>
+            <div class="nav-section-label">OUTILS</div>
+
+            <button class="nav-btn" data-view="tools" onclick="ouvrirVue('tools')">
+                <span>🔧</span><span class="nav-label">Outils</span>
             </button>
 
-            <button class="nav-btn"
-                    data-view="internet"
-                    onclick="ouvrirVue('internet')">
-                <span>🌐</span>
-                <span class="nav-label">Internet</span>
+            <button class="nav-btn" data-view="internet" onclick="ouvrirVue('internet')">
+                <span>🌐</span><span class="nav-label">Internet</span>
             </button>
 
-            <button class="nav-btn"
-                    data-view="voice"
-                    onclick="ouvrirVue('voice')">
-                <span>🎙️</span>
-                <span class="nav-label">Voix</span>
+            <button class="nav-btn" data-view="voice" onclick="ouvrirVue('voice')">
+                <span>🎙️</span><span class="nav-label">Voix</span>
+            </button>
+
+            <button class="nav-btn nav-report-btn" type="button" onclick="ouvrirVue('settings'); setTimeout(()=>document.getElementById('report-account')?.scrollIntoView({behavior:'smooth'}),150)">
+                <span>🚨</span><span class="nav-label">Sécurité</span>
             </button>
 
         </nav>
@@ -116,7 +102,7 @@
 
             <div class="version">
                 <strong>Xyro.AI</strong>
-                <small>V3.0.0</small>
+                <small>V3.0.1</small>
             </div>
 
         </div>
