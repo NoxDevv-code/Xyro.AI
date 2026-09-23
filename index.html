@@ -541,6 +541,10 @@
                         🖼️ Image
                     </button>
 
+                    <button onclick="afficherNotification('La génération vidéo arrive bientôt 🎬')">
+                        🎬 Vidéo
+                    </button>
+
                 </div>
 
             </div>
@@ -858,6 +862,48 @@
                     <p>
                         Utilise ta voix pour parler
                         avec Xyro.
+                    </p>
+
+                </button>
+
+
+                <button
+                    class="tool-card"
+                    type="button"
+                    onclick="ouvrirCreateurImage()">
+
+                    <div class="tool-icon">
+                        🖼️
+                    </div>
+
+                    <h3>
+                        Générer une image
+                    </h3>
+
+                    <p>
+                        Décris une image et Xyro la crée directement dans le chat.
+                    </p>
+
+                </button>
+
+
+                <button
+                    class="tool-card media-coming-soon"
+                    type="button"
+                    onclick="afficherNotification('La génération vidéo arrive bientôt 🎬')">
+
+                    <div class="tool-icon">
+                        🎬
+                    </div>
+
+                    <span class="coming-badge">COMING SOON</span>
+
+                    <h3>
+                        Générer une vidéo
+                    </h3>
+
+                    <p>
+                        Création vidéo par IA, bientôt disponible dans Xyro.
                     </p>
 
                 </button>
@@ -1591,7 +1637,7 @@
 
 <!-- SCRIPT -->
 
-<script src="script.js"></script>
+<script src="script.js?v=xyro-v3-chatfix-20260923"></script>
 
 </body>
 </html>

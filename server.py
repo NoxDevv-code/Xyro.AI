@@ -283,6 +283,28 @@ def init_db():
     """)
 
     # -----------------------------------------------------
+    # PROTECTION DES REQUÊTES CHAT
+    # Empêche un même envoi navigateur de consommer
+    # plusieurs appels API si le navigateur renvoie la requête.
+    # -----------------------------------------------------
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS chat_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            request_id TEXT UNIQUE NOT NULL,
+            user_id TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'processing',
+            response TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_chat_requests_user_created
+        ON chat_requests(user_id, created_at)
+    """)
+
+    # -----------------------------------------------------
     # SIGNALEMENTS DE COMPTES
     # -----------------------------------------------------
     conn.execute("""
@@ -1120,15 +1142,18 @@ def ask_ai(
     # -----------------------------------------------------
 
     if needs_web(message):
+        web_kwargs = dict(kwargs)
+
+        web_kwargs["tools"] = [
+            {
+                "type": "web_search"
+            }
+        ]
+
+        # IMPORTANT : ne jamais refaire un deuxième appel OpenAI
+        # si la recherche Web échoue. Sinon un seul message peut
+        # consommer 2 requêtes API.
         try:
-            web_kwargs = dict(kwargs)
-
-            web_kwargs["tools"] = [
-                {
-                    "type": "web_search"
-                }
-            ]
-
             result = client.responses.create(
                 **web_kwargs
             )
@@ -1140,6 +1165,11 @@ def ask_ai(
                 "ERREUR RECHERCHE WEB :",
                 error
             )
+
+            raise RuntimeError(
+                "La recherche Internet de Xyro.AI est temporairement indisponible. "
+                "Aucun second appel API n'a été effectué."
+            ) from error
 
     # -----------------------------------------------------
     # RÉPONSE NORMALE
@@ -1509,6 +1539,61 @@ def chat():
     try:
         data = request.get_json(silent=True) or {}
 
+        request_id = str(
+            data.get("request_id") or uuid.uuid4()
+        ).strip()
+
+        # Un même envoi possède un identifiant unique.
+        # Si le navigateur ou un proxy renvoie exactement la même
+        # requête, on renvoie la réponse déjà obtenue au lieu de
+        # rappeler l'API.
+        conn = get_db()
+        previous_request = conn.execute(
+            """
+            SELECT status, response
+            FROM chat_requests
+            WHERE request_id = ? AND user_id = ?
+            """,
+            (request_id, user["public_id"])
+        ).fetchone()
+        conn.close()
+
+        if previous_request:
+            if previous_request["status"] == "done" and previous_request["response"]:
+                return jsonify({
+                    "response": previous_request["response"],
+                    "session_id": data.get("session_id"),
+                    "duplicate": True
+                })
+
+            return jsonify({
+                "error": "Cette requête est déjà en cours de traitement.",
+                "duplicate": True
+            }), 409
+
+        conn = get_db()
+        try:
+            conn.execute(
+                """
+                INSERT INTO chat_requests
+                (request_id, user_id, status, response, created_at)
+                VALUES (?, ?, 'processing', NULL, ?)
+                """,
+                (request_id, user["public_id"], datetime.utcnow().isoformat())
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            conn.close()
+            return jsonify({
+                "error": "Cette requête est déjà en cours de traitement.",
+                "duplicate": True
+            }), 409
+        conn.close()
+
+        print(
+            f"CHAT API | user={user['public_id']} | request={request_id} | session={data.get('session_id')}"
+        )
+
         message = data.get(
             "message",
             ""
@@ -1638,9 +1723,22 @@ def chat():
             response
         )
 
+        conn = get_db()
+        conn.execute(
+            """
+            UPDATE chat_requests
+            SET status = 'done', response = ?
+            WHERE request_id = ? AND user_id = ?
+            """,
+            (response, request_id, user["public_id"])
+        )
+        conn.commit()
+        conn.close()
+
         return jsonify({
             "response": response,
-            "session_id": session_id
+            "session_id": session_id,
+            "request_id": request_id
         })
 
     except Exception as error:
@@ -1648,6 +1746,20 @@ def chat():
             "ERREUR CHAT :",
             error
         )
+
+        try:
+            conn = get_db()
+            conn.execute(
+                """
+                DELETE FROM chat_requests
+                WHERE request_id = ? AND user_id = ?
+                """,
+                (request_id, user["public_id"])
+            )
+            conn.commit()
+            conn.close()
+        except Exception as cleanup_error:
+            print("ERREUR CLEANUP CHAT :", cleanup_error)
 
         return jsonify({
             "response":

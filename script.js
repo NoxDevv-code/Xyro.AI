@@ -1,5 +1,5 @@
 // ======================================================
-// XYRO.AI V2.1
+// XYRO.AI V3.1
 // SCRIPT PRINCIPAL
 // ======================================================
 
@@ -25,6 +25,7 @@ const mediaInput = document.getElementById("media-input");
 const attachMedia = document.getElementById("attach-media");
 const mediaPreview = document.getElementById("media-preview");
 let pendingMedia = null;
+let chatRequestInProgress = false;
 const send = document.getElementById("send");
 const chatArea = document.getElementById("chat-area");
 
@@ -705,11 +706,18 @@ async function envoyer(
 
     const message = messageForce ?? input.value.trim();
 
-    if ((!message && !pendingMedia) || send.disabled) {
+    if ((!message && !pendingMedia) || send.disabled || chatRequestInProgress) {
         return;
     }
 
+    chatRequestInProgress = true;
+
     const attachment = pendingMedia;
+    const requestId =
+        (window.crypto && typeof window.crypto.randomUUID === "function")
+            ? window.crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
     input.value = "";
     ajusterHauteurInput();
     send.disabled = true;
@@ -733,6 +741,7 @@ async function envoyer(
                     },
 
                     body: JSON.stringify({
+                        request_id: requestId,
                         message,
                         attachment: attachment ? {
                             kind: attachment.kind,
@@ -827,6 +836,7 @@ async function envoyer(
         );
 
     } finally {
+        chatRequestInProgress = false;
         send.disabled = false;
 
         input.focus();

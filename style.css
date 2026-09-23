@@ -4004,3 +4004,8 @@ input:focus, textarea:focus, select:focus { border-color:rgba(224,178,67,.48) !i
 .nav-btn { order:initial; }
 .nav-report-btn { margin-top:4px; }
 @media (max-width: 800px) { .nav-section-label { display:none; } }
+
+
+/* V3 media generation cards */
+.media-coming-soon, .roblox-coming-soon { position: relative; overflow: hidden; }
+.coming-badge { display:inline-flex; align-items:center; width:max-content; margin-bottom:8px; padding:4px 8px; border-radius:999px; font-size:10px; font-weight:800; letter-spacing:.12em; border:1px solid rgba(212,175,55,.35); color:#d4af37; background:rgba(212,175,55,.08); }
